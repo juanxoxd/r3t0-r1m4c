@@ -1,0 +1,115 @@
+service: ${self:custom.serviceName}
+frameworkVersion: '3'
+useDotenv: true
+
+custom:
+  webpack:
+    webpackConfig: './webpack.config.js'
+    includeModules: true
+    externals: ['swagger-ui-dist']
+  stage: dev
+  prefix: softtek-0001-swapi-api
+  stackNumber: '00'
+  stackName: 'swapi'
+  prefixName: ${self:custom.prefix}-${self:custom.stage}
+  prefixLambdaName: ${self:custom.prefixName}-ld-${self:custom.stackNumber}-${self:custom.stackName}
+  serviceName: ${self:custom.prefixName}-st-${self:custom.stackNumber}-${self:custom.stackName}
+  roleName: ${self:custom.prefixName}-role-${self:custom.stackNumber}-${self:custom.stackName}
+  sharedBucketName: ${self:custom.prefixName}-bucket-${self:custom.stackNumber}-shared
+  owner: juan-carrasco
+  eol: 2024-12-31
+  prefixTableName: ${self:custom.prefixName}-dynamo-${self:custom.stackNumber}
+  tagEnv:
+    dev: DEV
+    prd: PRD
+  tagProject: '01'
+  # customDomain:
+  #   domainName: api-softtek-dev.test.pe
+  #   basePath: swapi
+  #   stage: ${self:provider.stage}
+  #   createRoute53Record: false
+  serverless-offline:
+    httpPort: 4000
+    noPrependStageInUrl: true
+    prefix: ${self:custom.stackName}
+  optimize:
+    external: ['swagger-ui-dist']
+  prune:
+    automatic: true
+    number: 3
+  splitStacks:
+    perFunction: true
+
+package:
+  individually: true
+  excludeDevDependencies: true
+
+
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  stage: dev
+  profile: softtek-dev
+  stackName: ${self:custom.serviceName}
+  timeout: 30
+  apiName: ${self:service}
+  deploymentBucket:
+    name: ${self:custom.sharedBucketName}
+  # apiGateway:
+  #   binaryMediaTypes:
+  #     - 'multipart/form-data'
+  stackTags:
+    ENV: ${self:custom.tagEnv.${self:custom.stage}}
+    NAME: ${self:custom.serviceName}
+    PROJECT: ${self:custom.tagProject}
+    OWNER: ${self:custom.owner}
+    EOL: ${self:custom.eol}
+  environment:
+    NODE_ENV: ${env:NODE_ENV}
+    SCOPE: ${env:SCOPE}
+    PORT: ${env:PORT}
+    SWAPI_BASE_URL: ${env:SWAPI_BASE_URL}
+
+  iam:
+    role:
+      name: ${self:custom.roleName}
+      tags:
+        ENV: ${self:custom.tagEnv.${self:custom.stage}}
+        PROJECT: ${self:custom.tagProject}
+        DEPARTMENT: ${self:custom.tagDepartment}
+        NAME: ${self:custom.roleName}
+      statements:
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup,
+            - logs:CreateLogStream,
+            - logs:PutLogEvents,
+            - ec2:CreateNetworkInterface,
+            - ec2:DescribeNetworkInterfaces,
+            - ec2:DeleteNetworkInterface,
+            - ec2:AssignPrivateIpAddresses,
+            - ec2:UnassignPrivateIpAddresses
+          Resource: '*'
+
+plugins:
+  - serverless-offline
+  - serverless-deployment-bucket
+  - serverless-prune-plugin
+  - serverless-domain-manager
+  - serverless-plugin-monorepo
+  - serverless-plugin-optimize
+  - serverless-webpack
+
+functions:
+  app:
+    handler: dist/main.handler
+    name: ${self:custom.prefixLambdaName}-main
+    events:
+      - http:
+          path: /
+          method: any
+      - http:
+          path: /{proxy+}
+          method: any

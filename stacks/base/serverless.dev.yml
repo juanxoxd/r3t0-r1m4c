@@ -1,0 +1,124 @@
+service: ${self:custom.serviceName}
+frameworkVersion: "3"
+
+custom:
+  custom: us-east-1
+  stage: dev
+  prefix: softtek-0001-swapi
+  stackNumber: "00"
+  stackName: base
+  prefixName: ${self:custom.prefix}-${self:custom.stage}
+  serviceName: ${self:custom.prefixName}-st-${self:custom.stackNumber}-${self:custom.stackName}
+  sharedBucketName: ${self:custom.prefixName}-s3-bk-${self:custom.stackNumber}-shared
+  eventBusName: ${self:custom.prefixName}-eb-${self:custom.stackNumber}
+  kmsKeyAlias: alias/${self:custom.prefixName}-kms-${self:custom.stackNumber}
+  eol: 2024-12-31
+  owner: "juan-carrasco"
+  tagEnv:
+    dev: DEV
+    prd: PRD
+  tagProject: '01'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: ${opt:region, "us-east-1"}
+  profile: swapi-dev
+  stage: ${self:custom.stage}
+  apiName: ${self:custom.serviceName}
+  stackName: ${self:custom.serviceName}
+  stackTags:
+    ENV: ${self:custom.tagEnv.${self:custom.stage}}
+    PROJECT: ${self:custom.tagProject}
+    EOL: ${self:custom.eol}
+    OWNER: ${self:custom.owner}
+
+resources:
+  Resources:
+    S3BucketShared:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.sharedBucketName}
+        Tags:
+          - Key: NAME
+            Value: ${self:custom.sharedBucketName}
+
+    EventBus:
+      Type: AWS::Events::EventBus
+      Properties:
+        Name: ${self:custom.eventBusName}
+        Tags:
+          - Key: NAME
+            Value: ${self:custom.eventBusName}
+    KmsKey:
+      Type: AWS::KMS::Key
+      Properties:
+        Description: "Key used for data encryption"
+        Enabled: true
+        EnableKeyRotation: true
+        KeyPolicy:
+          Version: "2012-10-17"
+          Statement:
+            - Sid: "Enabled CloudWatch send message topic"
+              Effect: Allow
+              Principal:
+                AWS: "*"
+              Action:
+                - kms:Decrypt
+                - kms:GenerateDataKey
+              Resource: "*"
+            - Sid: "Enable IAM User Permissions"
+              Effect: Allow
+              Principal:
+                AWS: "*"
+              Action:
+                - kms:*
+              Resource: "*"
+            - Sid: "Allow attachment of persistent resources"
+              Effect: Allow
+              Principal:
+                AWS: "*"
+              Action:
+                - kms:CreateGrant
+                - kms:ListGrants
+                - kms:RevokeGrant
+                - kms:GetPublicKey
+                - kms:Decrypt
+                - kms:Encrypt
+                - kms:DescribeKey
+                - kms:GenerateDataKey
+              Resource: "*"
+        Tags:
+          - Key: NAME
+            Value: ${self:custom.kmsKeyAlias}
+    KmsAlias:
+      Type: AWS::KMS::Alias
+      Properties:
+        AliasName: ${self:custom.kmsKeyAlias}
+        TargetKeyId: !Ref KmsKey
+
+  Outputs:
+    S3BucketShared:
+      Value: !Ref S3BucketShared
+      Export:
+        Name: S3BucketShared-${self:custom.stackName}
+    S3BucketSharedArn:
+      Value: !GetAtt S3BucketShared.Arn
+      Export:
+        Name: S3BucketSharedArn-${self:custom.stackName}
+    EventBus:
+      Value: !Ref EventBus
+      Export:
+        Name: EventBus-${self:custom.stackName}
+    EventBusArn:
+      Value: !GetAtt EventBus.Arn
+      Export:
+        Name: EventBusArn
+    KmsKey:
+      Value: !Ref KmsKey
+      Export:
+        Name: KmsKey
+    KmsKeyArn:
+      Value: !GetAtt KmsKey.Arn
+      Export:
+        Name: KmsKeyArn

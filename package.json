@@ -1,0 +1,40 @@
+{
+  "name": "@softtek/backend",
+  "version": "0.0.1",
+  "description": "",
+  "workspaces": [
+    "packages/*"
+  ],
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "build": "lerna run build",
+    "deploy": "lerna run deploy",
+    "build:shared": "lerna run build --scope @softtek/shared",
+    "compilance": "lerna run compilance --parallel"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.141",
+    "@types/express": "^4.17.21",
+    "@types/uuid": "^10.0.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "lerna": "^8.1.6",
+    "serverless-deployment-bucket": "^1.6.0",
+    "serverless-domain-manager": "^7.3.8",
+    "serverless-offline": "^13.6.0",
+    "serverless-plugin-monorepo": "^0.11.0",
+    "serverless-plugin-optimize": "^4.2.1-rc.1",
+    "serverless-prune-plugin": "^2.0.2",
+    "serverless-webpack": "^5.14.1",
+    "ts-loader": "^9.5.1",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.5.3",
+    "webpack": "^5.92.1",
+    "webpack-cli": "^5.1.4",
+    "webpack-node-externals": "^3.0.0"
+  },
+  "dependencies": {
+    "serverless-dotenv-plugin": "^6.0.0"
+  }
+}

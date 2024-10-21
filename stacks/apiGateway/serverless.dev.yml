@@ -1,0 +1,61 @@
+service: ${self:custom.serviceName}
+
+custom:
+  stage: ${opt:stage, "dev"}
+  prefix: softtek-0001-swapi
+  stackNumber: "00"
+  stackName: apiGateway
+  prefixName: ${self:custom.prefix}-${self:custom.stage}
+  serviceName: ${self:custom.prefixName}-st-${self:custom.stackNumber}-${self:custom.stackName}
+  sharedBucketName: ${self:custom.prefixName}-bucket-${self:custom.stackNumber}-shared
+  domainName: api-swapi.domaintest.com.pe
+  tagEnv:
+    dev: DEV
+    prd: PRD
+  tagProject: 01
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: ${opt:region, "us-east-1"}
+  profile: softtek-dev
+  stage: ${self:custom.stage}
+  apiName: ${self:custom.serviceName}
+  stackName: ${self:custom.serviceName}
+  deploymentBucket:
+    name: ${self:custom.sharedBucketName}
+  stackTags:
+    ENV: ${self:custom.tagEnv.${self:custom.stage}}
+    PROJECT: ${self:custom.tagProject}
+
+resources:
+  Resources:
+    ApiGatewayCustomDomain:
+      Type: AWS::ApiGateway::DomainName
+      Properties:
+        DomainName: api-swapi.domaintest.com.pe
+        RegionalCertificateArn: arn:aws:acm:us-east-1:644365500302:certificate/7d025105-7e6b-4f11-856b-a1df703633d4
+        EndpointConfiguration:
+          Types:
+            - REGIONAL
+        SecurityPolicy: TLS_1_2
+        Tags:
+          - Key: NAME
+            Value: ${self:custom.prefixName}-domain-${self:custom.stackNumber}
+
+    # ApiGatewayCustomDomainRecord:
+    #   Type: AWS::Route53::RecordSet
+    #   Properties:
+    #     HostedZoneId: Z081191927ML2MEJXKJG4
+    #     Name: ${self:custom.domainName}
+    #     Type: A
+    #     AliasTarget:
+    #       DNSName: !GetAtt ApiGatewayCustomDomain.RegionalDomainName
+    #       HostedZoneId: !GetAtt ApiGatewayCustomDomain.RegionalHostedZoneId
+    #       EvaluateTargetHealth: false
+
+  Outputs:
+    ApiGatewayDomainName:
+      Value: !Ref ApiGatewayCustomDomain
+      Export:
+        Name: ApiGatewayDomainName
